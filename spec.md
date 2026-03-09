@@ -169,29 +169,51 @@ func (p Params) Clone() Params
 
 ## 6.2 MethodSet
 
-`MethodSet` represents allowed HTTP methods for a route.
+`MethodSet` represents allowed HTTP methods for a route as a compact bitmask.
 
 ```go
 type MethodSet uint16
+
+const (
+    MethodGet     MethodSet = 1 << iota // corresponds to net/http.MethodGet
+    MethodHead                          // corresponds to net/http.MethodHead
+    MethodPost                          // corresponds to net/http.MethodPost
+    MethodPut                           // corresponds to net/http.MethodPut
+    MethodPatch                         // corresponds to net/http.MethodPatch
+    MethodDelete                        // corresponds to net/http.MethodDelete
+    MethodOptions                       // corresponds to net/http.MethodOptions
+    MethodTrace                         // corresponds to net/http.MethodTrace
+    MethodConnect                       // corresponds to net/http.MethodConnect
+)
 ```
 
-Implementations SHOULD provide bit flags for common methods:
+The nine constants above correspond exactly to the method constants defined in `net/http` (`http.MethodGet`, `http.MethodHead`, etc.).  Implementors SHOULD use these `net/http` string values when converting to and from string representations.
 
-- `GET`
-- `HEAD`
-- `POST`
-- `PUT`
-- `PATCH`
-- `DELETE`
-- `OPTIONS`
-- `TRACE`
-- `CONNECT`
+The package SHALL provide a constructor for converting a `net/http` method string to a `MethodSet`:
+
+```go
+// MethodFromString returns the MethodSet bit for a standard HTTP method string.
+// It returns 0 and an error if the method is not one of the nine standard methods.
+func MethodFromString(method string) (MethodSet, error)
+```
+
+### Design Rationale
+
+Two alternatives were evaluated:
+
+1. **Arbitrary-method support** — represent `MethodSet` as a string set (e.g., `map[string]struct{}`).  Flexible but heap-allocated and O(method-string-length) per check.
+2. **Standard-method bitmask** — represent `MethodSet` as `uint16` with one bit per standard method.  O(1) membership test, 2-byte footprint, zero allocations.
+
+The nine methods defined by `net/http` (`GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `TRACE`, `CONNECT`) cover the complete set of methods specified in RFC 9110 plus PATCH (RFC 5789).  These are sufficient for the vast majority of HTTP API use cases.  The bitmask representation therefore provides better performance and correctness without meaningful loss of generality.
+
+Implementations that require non-standard HTTP methods (e.g., WebDAV verbs such as `PROPFIND`) are out of scope for this specification.
 
 ### 6.2.1 Semantics
 
 - a route MUST declare at least one method unless explicitly documented otherwise
 - `HEAD` MAY be implicitly matched by `GET` if enabled by router policy
 - method matching SHALL occur before or during candidate selection
+- `MethodFromString` MUST be case-sensitive and MUST reject lowercase or mixed-case method strings
 
 ## 6.3 QueryMode
 
@@ -893,6 +915,20 @@ import (
 type Params map[string]string
 
 type MethodSet uint16
+
+const (
+    MethodGet     MethodSet = 1 << iota
+    MethodHead
+    MethodPost
+    MethodPut
+    MethodPatch
+    MethodDelete
+    MethodOptions
+    MethodTrace
+    MethodConnect
+)
+
+func MethodFromString(method string) (MethodSet, error)
 
 type QueryMode uint8
 const (
