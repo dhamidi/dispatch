@@ -15,34 +15,6 @@ import (
 	"github.com/dhamidi/uritemplate"
 )
 
-// Params represents route parameters after extraction, default application,
-// and normalization. Keys are case-sensitive; values are strings.
-// Callers should treat a Params returned in a Match as read-only.
-type Params map[string]string
-
-// Get returns the value for key, or an empty string if not present.
-func (p Params) Get(key string) string {
-	return p[key]
-}
-
-// Lookup returns the value for key and a boolean indicating whether it was found.
-func (p Params) Lookup(key string) (string, bool) {
-	v, ok := p[key]
-	return v, ok
-}
-
-// Clone returns a shallow copy of p.
-func (p Params) Clone() Params {
-	if p == nil {
-		return nil
-	}
-	c := make(Params, len(p))
-	for k, v := range p {
-		c[k] = v
-	}
-	return c
-}
-
 // MethodSet is a bitmask of allowed HTTP methods.
 type MethodSet uint16
 
