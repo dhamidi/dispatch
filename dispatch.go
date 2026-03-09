@@ -15,35 +15,6 @@ import (
 )
 
 
-// QueryMode controls how template query variables participate in matching.
-type QueryMode uint8
-
-const (
-	// QueryLoose: undeclared query params are ignored for match eligibility.
-	QueryLoose QueryMode = iota
-	// QueryCanonical: undeclared params don't prevent matching but may be
-	// dropped from the canonical URL.
-	QueryCanonical
-	// QueryStrict: undeclared query params reject the candidate route.
-	QueryStrict
-)
-
-// CanonicalPolicy controls what happens when the request URL differs from the
-// canonical URL computed for the matched route.
-type CanonicalPolicy uint8
-
-const (
-	// CanonicalIgnore: no canonical comparison is performed.
-	CanonicalIgnore CanonicalPolicy = iota
-	// CanonicalAnnotate: canonical URL is computed and exposed in Match;
-	// no automatic redirect.
-	CanonicalAnnotate
-	// CanonicalRedirect: router emits a redirect when the URL is non-canonical.
-	CanonicalRedirect
-	// CanonicalReject: non-canonical requests are rejected (not dispatchable).
-	CanonicalReject
-)
-
 // RequestContext holds request attributes used during routing and constraint
 // evaluation.
 type RequestContext struct {
