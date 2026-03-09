@@ -101,27 +101,27 @@ func (s *Scope) Handle(route Route) error {
 
 // GET registers a GET route within the scope.
 func (s *Scope) GET(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return s.register(MethodGET, name, tmpl, h, opts...)
+	return s.register(GET, name, tmpl, h, opts...)
 }
 
 // POST registers a POST route within the scope.
 func (s *Scope) POST(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return s.register(MethodPOST, name, tmpl, h, opts...)
+	return s.register(POST, name, tmpl, h, opts...)
 }
 
 // PUT registers a PUT route within the scope.
 func (s *Scope) PUT(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return s.register(MethodPUT, name, tmpl, h, opts...)
+	return s.register(PUT, name, tmpl, h, opts...)
 }
 
 // PATCH registers a PATCH route within the scope.
 func (s *Scope) PATCH(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return s.register(MethodPATCH, name, tmpl, h, opts...)
+	return s.register(PATCH, name, tmpl, h, opts...)
 }
 
 // DELETE registers a DELETE route within the scope.
 func (s *Scope) DELETE(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return s.register(MethodDELETE, name, tmpl, h, opts...)
+	return s.register(DELETE, name, tmpl, h, opts...)
 }
 
 // Scope creates a nested child scope that inherits from s and is further

@@ -56,7 +56,7 @@ func Host(host string) Constraint {
 // Methods returns a Constraint that passes when rc.Method is in ms.
 func Methods(ms MethodSet) Constraint {
 	return ConstraintFunc(func(rc *RequestContext, p Params) bool {
-		return ms.contains(methodFromString(rc.Method))
+		return ms.Has(methodFromString(rc.Method))
 	})
 }
 

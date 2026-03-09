@@ -8,70 +8,12 @@
 package dispatch
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/dhamidi/uritemplate"
 )
 
-// MethodSet is a bitmask of allowed HTTP methods.
-type MethodSet uint16
-
-const (
-	MethodGET     MethodSet = 1 << iota // GET
-	MethodHEAD                          // HEAD
-	MethodPOST                          // POST
-	MethodPUT                           // PUT
-	MethodPATCH                         // PATCH
-	MethodDELETE                        // DELETE
-	MethodOPTIONS                       // OPTIONS
-	MethodTRACE                         // TRACE
-	MethodCONNECT                       // CONNECT
-)
-
-// MethodFromString returns the MethodSet bit for a standard HTTP method string.
-// It returns 0 and an error if the method is not one of the nine standard methods.
-// It is case-sensitive and rejects lowercase or mixed-case method strings.
-func MethodFromString(method string) (MethodSet, error) {
-	m := methodFromString(method)
-	if m == 0 {
-		return 0, fmt.Errorf("dispatch: unknown HTTP method %q", method)
-	}
-	return m, nil
-}
-
-// methodFromString maps an HTTP method string to its MethodSet bit.
-// Returns 0 for unknown methods.
-func methodFromString(m string) MethodSet {
-	switch m {
-	case http.MethodGet:
-		return MethodGET
-	case http.MethodHead:
-		return MethodHEAD
-	case http.MethodPost:
-		return MethodPOST
-	case http.MethodPut:
-		return MethodPUT
-	case http.MethodPatch:
-		return MethodPATCH
-	case http.MethodDelete:
-		return MethodDELETE
-	case http.MethodOptions:
-		return MethodOPTIONS
-	case http.MethodTrace:
-		return MethodTRACE
-	case http.MethodConnect:
-		return MethodCONNECT
-	default:
-		return 0
-	}
-}
-
-// contains reports whether ms includes m.
-func (ms MethodSet) contains(m MethodSet) bool {
-	return ms&m != 0
-}
 
 // QueryMode controls how template query variables participate in matching.
 type QueryMode uint8

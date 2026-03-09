@@ -34,7 +34,7 @@ func TestParamsHelpers(t *testing.T) {
 
 func TestMethodFromString(t *testing.T) {
 	m, err := MethodFromString("GET")
-	if err != nil || m != MethodGET {
+	if err != nil || m != GET {
 		t.Error("MethodFromString GET failed")
 	}
 	_, err = MethodFromString("get")
@@ -48,11 +48,11 @@ func TestMethodFromString(t *testing.T) {
 }
 
 func TestMethodSetContains(t *testing.T) {
-	ms := MethodGET | MethodPOST
-	if !ms.contains(MethodGET) {
+	ms := GET | POST
+	if !ms.Has(GET) {
 		t.Error("should contain GET")
 	}
-	if ms.contains(MethodDELETE) {
+	if ms.Has(DELETE) {
 		t.Error("should not contain DELETE")
 	}
 }
@@ -82,10 +82,10 @@ func TestRouterHandleValidation(t *testing.T) {
 	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h}); err != ErrInvalidMethodSet {
 		t.Error("expected ErrInvalidMethodSet")
 	}
-	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: MethodGET}); err != nil {
+	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: GET}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
-	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: MethodGET}); err != ErrDuplicateRoute {
+	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: GET}); err != ErrDuplicateRoute {
 		t.Error("expected ErrDuplicateRoute")
 	}
 }
