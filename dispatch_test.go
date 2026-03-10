@@ -235,7 +235,7 @@ func TestContextHelpers(t *testing.T) {
 		Name:   "test",
 		Params: Params{"id": "42"},
 	}
-	ctx := withMatch(context.Background(), m)
+	ctx := storeMatchInContext(context.Background(), m)
 
 	got, ok := MatchFromContext(ctx)
 	if !ok || got != m {

@@ -32,7 +32,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// Enrich context and dispatch.
-		ctx := withMatch(req.Context(), m)
+		ctx := storeMatchInContext(req.Context(), m)
 		r2 := req.WithContext(ctx)
 		m.Route.Handler.ServeHTTP(w, r2)
 	case isErr(err, ErrNotFound):

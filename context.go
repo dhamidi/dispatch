@@ -2,24 +2,22 @@ package dispatch
 
 import "context"
 
-// contextKey is an unexported type used as a key in request contexts to avoid
-// collisions with other packages.
-type contextKey int
+// contextKeyMatch is the key type used to store a *Match in a context.Context.
+// Using a named unexported type prevents key collisions with other packages.
+type contextKeyMatch struct{}
 
-const (
-	matchContextKey contextKey = iota
-)
-
-// MatchFromContext retrieves the Match stored in ctx by the router after
-// successful route selection (§13.1).
-// Returns false if no match is present.
+// MatchFromContext retrieves the [Match] stored by the router in ctx after a
+// successful route resolution. It returns the Match and true if present, or
+// nil and false if ctx does not contain a Match (e.g., the handler was called
+// outside of a dispatch cycle).
 func MatchFromContext(ctx context.Context) (*Match, bool) {
-	m, ok := ctx.Value(matchContextKey).(*Match)
+	m, ok := ctx.Value(contextKeyMatch{}).(*Match)
 	return m, ok
 }
 
-// RouteNameFromContext retrieves the matched route name from ctx.
-// Returns false if no match is present.
+// RouteNameFromContext returns the route name from ctx. It is a convenience
+// wrapper around [MatchFromContext] for the common case of needing only the
+// route name.
 func RouteNameFromContext(ctx context.Context) (string, bool) {
 	m, ok := MatchFromContext(ctx)
 	if !ok {
@@ -28,8 +26,8 @@ func RouteNameFromContext(ctx context.Context) (string, bool) {
 	return m.Name, true
 }
 
-// ParamsFromContext retrieves the matched Params from ctx.
-// Returns false if no match is present.
+// ParamsFromContext returns the resolved route [Params] from ctx. It is a
+// convenience wrapper around [MatchFromContext].
 func ParamsFromContext(ctx context.Context) (Params, bool) {
 	m, ok := MatchFromContext(ctx)
 	if !ok {
@@ -38,8 +36,8 @@ func ParamsFromContext(ctx context.Context) (Params, bool) {
 	return m.Params, true
 }
 
-// withMatch returns a copy of ctx with match stored under matchContextKey.
-// Used internally by the router after route selection (§13.2).
-func withMatch(ctx context.Context, m *Match) context.Context {
-	return context.WithValue(ctx, matchContextKey, m)
+// storeMatchInContext returns a copy of ctx with match stored under contextKeyMatch.
+// Used internally by the router after route selection.
+func storeMatchInContext(ctx context.Context, m *Match) context.Context {
+	return context.WithValue(ctx, contextKeyMatch{}, m)
 }
