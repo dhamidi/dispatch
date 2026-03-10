@@ -105,61 +105,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	m.Route.Handler.ServeHTTP(w, req.WithContext(ctx))
 }
 
-// Handle registers a route.
-func (r *Router) Handle(route Route) error {
-	if route.Name == "" {
-		return ErrEmptyRouteName
-	}
-	if _, exists := r.byName[route.Name]; exists {
-		return ErrDuplicateRoute
-	}
-	if route.Template == nil {
-		return ErrNilTemplate
-	}
-	if route.Handler == nil {
-		return ErrNilHandler
-	}
-	if route.Methods == 0 {
-		return ErrInvalidMethodSet
-	}
-	if route.CanonicalPolicy == CanonicalRedirect && route.RedirectCode != 0 {
-		if route.RedirectCode < 300 || route.RedirectCode > 399 {
-			return ErrInvalidRedirectCode
-		}
-	}
-
-	// Clone mutable fields to avoid aliasing
-	stored := route
-	stored.Defaults = route.Defaults.Clone()
-	if route.Metadata != nil {
-		stored.Metadata = make(map[string]string, len(route.Metadata))
-		for k, v := range route.Metadata {
-			stored.Metadata[k] = v
-		}
-	}
-	if route.Constraints != nil {
-		stored.Constraints = make([]Constraint, len(route.Constraints))
-		copy(stored.Constraints, route.Constraints)
-	}
-
-	idx := len(r.routes)
-	reg := &registeredRoute{
-		Route: stored,
-		index: idx,
-		score: computeScore(&stored, nil, nil, idx),
-	}
-	r.routes = append(r.routes, reg)
-	r.byName[stored.Name] = reg
-	return nil
-}
-
-// MustHandle calls Handle and panics if it returns an error.
-func (r *Router) MustHandle(route Route) {
-	if err := r.Handle(route); err != nil {
-		panic(err)
-	}
-}
-
 // Match resolves req to the best matching route.
 func (r *Router) Match(req *http.Request) (*Match, error) {
 	rc := &RequestContext{

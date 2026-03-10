@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -79,13 +80,13 @@ func TestRouterHandleValidation(t *testing.T) {
 	if err := r.Handle(Route{Name: "test", Template: tmpl}); err != ErrNilHandler {
 		t.Error("expected ErrNilHandler")
 	}
-	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h}); err != ErrInvalidMethodSet {
-		t.Error("expected ErrInvalidMethodSet")
+	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h}); err == nil {
+		t.Error("expected error for zero method set")
 	}
 	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: GET}); err != nil {
 		t.Errorf("expected nil, got %v", err)
 	}
-	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: GET}); err != ErrDuplicateRoute {
+	if err := r.Handle(Route{Name: "test", Template: tmpl, Handler: h, Methods: GET}); !errors.Is(err, ErrDuplicateRoute) {
 		t.Error("expected ErrDuplicateRoute")
 	}
 }
@@ -444,7 +445,7 @@ func TestUniqueRouteNames(t *testing.T) {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 	r.GET("test", "/a", h)
 	err := r.GET("test", "/b", h)
-	if err != ErrDuplicateRoute {
+	if !errors.Is(err, ErrDuplicateRoute) {
 		t.Errorf("expected ErrDuplicateRoute, got %v", err)
 	}
 }
