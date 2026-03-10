@@ -166,6 +166,29 @@ path, err := r.Path("search", dispatch.Params{"q": "golang", "page": "2"})
 // path == "/search?q=golang&page=2"
 ```
 
+### Typed URL helpers with BindHelpers
+
+`BindHelpers` generates type-safe URL helper functions by binding struct fields to named routes. Define a struct with `func` fields tagged with `route:"<name>"`, then call `BindHelpers` once at startup:
+
+```go
+var urls struct {
+    UsersShow  func(id int64) string          `route:"users.show"`
+    Search     func(q string, page int) string `route:"search"`
+    PostsIndex func() string                   `route:"posts.index"`
+}
+r.BindHelpers(&urls)
+
+urls.UsersShow(42)          // "/users/42"
+urls.Search("golang", 1)    // "/search?q=golang&page=1"
+urls.PostsIndex()           // "/posts"
+```
+
+Function arguments are matched positionally to the route's template variables (path variables first, then query variables, in declaration order). Supported argument types: `string`, `int`, `int64`, `int32`, `uint`, `uint64`, `uint32`, `float64`, `bool`, and any type implementing `fmt.Stringer`.
+
+Return type must be `string` or `(string, error)`. Functions returning only `string` panic on generation failure; `(string, error)` functions return the error instead.
+
+`BindHelpers` panics if the destination is not a struct pointer, a route tag references an unknown route, the argument count doesn't match the template variables, or an argument type is unsupported. Fields without a `route` tag and unexported fields are silently skipped.
+
 ### Access match data in handlers
 
 After dispatch, route metadata is available through the request context:
