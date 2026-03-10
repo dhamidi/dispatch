@@ -1,10 +1,6 @@
 package dispatch
 
-import (
-	"net/http"
-
-	"github.com/dhamidi/uritemplate"
-)
+import "net/http"
 
 // routerConfig holds all configurable router settings.
 type routerConfig struct {
@@ -98,36 +94,6 @@ func (r *Router) Routes() []RouteInfo {
 	return infos
 }
 
-// GET registers a route that matches the GET (and implicitly HEAD) method.
-func (r *Router) GET(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(GET, name, tmpl, h, opts...)
-}
-
-// POST registers a route that matches the POST method.
-func (r *Router) POST(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(POST, name, tmpl, h, opts...)
-}
-
-// PUT registers a route that matches the PUT method.
-func (r *Router) PUT(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(PUT, name, tmpl, h, opts...)
-}
-
-// PATCH registers a route that matches the PATCH method.
-func (r *Router) PATCH(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(PATCH, name, tmpl, h, opts...)
-}
-
-// DELETE registers a route that matches the DELETE method.
-func (r *Router) DELETE(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(DELETE, name, tmpl, h, opts...)
-}
-
-// OPTIONS registers a route that matches the OPTIONS method.
-func (r *Router) OPTIONS(name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	return r.register(OPTIONS, name, tmpl, h, opts...)
-}
-
 // Scope registers routes under a shared configuration scope (§9).
 func (r *Router) Scope(fn func(*Scope)) {
 	s := &Scope{router: r}
@@ -154,19 +120,6 @@ type RouteInfo struct {
 }
 
 // --- internal helpers -------------------------------------------------------
-
-// register is the shared implementation for GET/POST/PUT/PATCH/DELETE/OPTIONS.
-func (r *Router) register(methods MethodSet, name, tmpl string, h http.Handler, opts ...RouteOption) error {
-	t, err := uritemplate.Parse(tmpl)
-	if err != nil {
-		return err
-	}
-	route := Route{Name: name, Methods: methods, Template: t, Handler: h}
-	for _, opt := range opts {
-		opt(&route)
-	}
-	return r.Handle(route)
-}
 
 // defaultNotFound writes a plain 404 response.
 func defaultNotFound(w http.ResponseWriter, _ *http.Request) {
