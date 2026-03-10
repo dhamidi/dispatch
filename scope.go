@@ -128,12 +128,12 @@ func (s *Scope) DELETE(name, tmpl string, h http.Handler, opts ...RouteOption) e
 // configured by fn. Nested name/template prefixes are concatenated;
 // defaults and metadata are merged (inner wins); constraints are appended
 // outer-first (§9.3.1).
-func (s *Scope) Scope(fn func(*Scope)) {
+func (s *Scope) Scope(fn func(*Scope), opts ...ScopeOption) {
 	child := &Scope{
 		router:          s.router,
 		parent:          s,
-		namePrefix:      s.namePrefix,
-		templatePrefix:  s.templatePrefix,
+		namePrefix:      "",
+		templatePrefix:  "",
 		queryMode:       s.queryMode,
 		canonicalPolicy: s.canonicalPolicy,
 	}
@@ -150,6 +150,17 @@ func (s *Scope) Scope(fn func(*Scope)) {
 			child.metadata[k] = v
 		}
 	}
+	for _, o := range opts {
+		o(child)
+	}
+	// Compose name prefix: parent.child
+	if s.namePrefix != "" && child.namePrefix != "" {
+		child.namePrefix = s.namePrefix + "." + child.namePrefix
+	} else if s.namePrefix != "" {
+		child.namePrefix = s.namePrefix
+	}
+	// Compose template prefix: parent + child (string concatenation)
+	child.templatePrefix = s.templatePrefix + child.templatePrefix
 	fn(child)
 }
 
