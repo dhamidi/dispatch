@@ -68,6 +68,7 @@ r.POST("users.create", "/users", createHandler)
 r.PUT("users.update", "/users/{id}", updateHandler)
 r.PATCH("users.patch", "/users/{id}", patchHandler)
 r.DELETE("users.delete", "/users/{id}", deleteHandler)
+r.OPTIONS("cors.preflight", "/users", preflightHandler)
 ```
 
 Each method accepts optional `RouteOption` values:
@@ -398,6 +399,13 @@ route, ok := r.Route("users.show")
 
 // List all registered routes
 routes := r.Routes()
+
+// Match a request programmatically without dispatching
+m, err := r.Match(req)
+if err != nil {
+    // handle ErrNotFound or ErrMethodNotAllowed
+}
+fmt.Println(m.Name, m.Params)
 ```
 
 ### Matching semantics
