@@ -322,6 +322,18 @@ r.GET("page", "/pages/{slug}", handler,
 )
 ```
 
+### Handle trailing slashes
+
+Control whether the router normalizes trailing slashes by redirecting to the alternate form when it matches a registered route:
+
+```go
+r := dispatch.New(dispatch.WithDefaultSlashPolicy(dispatch.SlashRedirect))
+```
+
+When `SlashRedirect` is enabled, requests to `/users/` will 301-redirect to `/users` (or vice versa) if the alternate form matches a registered route. This is especially useful for parameterized routes — without normalization, a trailing slash can be absorbed into a path parameter (e.g., `/posts/42/` matching `{id}` as `"42/"`).
+
+The default policy is `SlashIgnore`, which performs no trailing-slash normalization.
+
 ## Reference
 
 ### Router options
@@ -336,6 +348,7 @@ Pass these to `dispatch.New()`:
 | `WithDefaultQueryMode(m)` | Default `QueryMode` for all routes | `QueryLoose` |
 | `WithDefaultCanonicalPolicy(p)` | Default `CanonicalPolicy` for all routes | `CanonicalIgnore` |
 | `WithDefaultRedirectCode(code)` | Default redirect status code | 301 |
+| `WithDefaultSlashPolicy(p)` | Trailing-slash normalization policy | `SlashIgnore` |
 | `WithImplicitHEAD(bool)` | GET routes also match HEAD | true |
 
 ### Route options
