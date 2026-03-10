@@ -8,43 +8,66 @@ import (
 	"github.com/dhamidi/uritemplate"
 )
 
-// Router is the central HTTP router.
-// It implements http.Handler and is safe for concurrent use after all routes
-// have been registered.
-type Router struct {
-	// routes stores routes in registration order for candidate scanning.
-	routes []*Route
-
-	// routesByName maps route names to routes for O(1) generation lookups.
-	routesByName map[string]*Route
-
-	// Error handlers (configurable via Options).
-	notFound         http.Handler
-	methodNotAllowed http.Handler
-	dispatchError    http.Handler
-
-	// Router-level defaults (may be overridden per route).
-	defaultQueryMode       QueryMode
-	defaultCanonicalPolicy CanonicalPolicy
-	defaultRedirectCode    int
-
-	// implicitHEADFromGET: when true, GET routes also match HEAD requests.
-	implicitHEADFromGET bool
+// routerConfig holds all configurable router settings.
+type routerConfig struct {
+	notFoundHandler         http.Handler
+	methodNotAllowedHandler http.Handler
+	dispatchErrorHandler    http.Handler
+	defaultQueryMode        QueryMode
+	defaultCanonicalPolicy  CanonicalPolicy
+	defaultRedirectCode     int
+	implicitHEADFromGET     bool
 }
 
-// New creates a new Router configured with the provided Options.
+// Router is a semantic HTTP router. It implements [http.Handler].
+//
+// Build a Router with [New], register routes with [Router.Handle] or the
+// convenience methods, then pass the Router to any net/http server.
+//
+// A Router is not safe for concurrent registration after serving has begun.
+// Register all routes during startup before calling [http.ListenAndServe].
+type Router struct {
+	config routerConfig
+	routes []*registeredRoute            // in registration order
+	byName map[string]*registeredRoute
+}
+
+// registeredRoute wraps a Route with precomputed scoring metadata.
+type registeredRoute struct {
+	Route
+	index int            // registration order index, used in candidateScore.Registration
+	score candidateScore // precomputed structural scoring hints
+}
+
+// Option is a functional option for configuring a [Router] at construction time.
+type Option func(*routerConfig)
+
+// New creates a new Router with optional configuration options.
+//
+// Example:
+//
+//	r := dispatch.New(
+//	    dispatch.WithNotFoundHandler(myNotFound),
+//	    dispatch.WithDefaultQueryMode(dispatch.QueryStrict),
+//	)
 func New(opts ...Option) *Router {
-	r := &Router{
-		routesByName:        make(map[string]*Route),
-		implicitHEADFromGET: true,
+	cfg := routerConfig{
 		defaultRedirectCode: http.StatusMovedPermanently,
-		notFound:            http.HandlerFunc(defaultNotFound),
-		methodNotAllowed:    http.HandlerFunc(defaultMethodNotAllowed),
+		implicitHEADFromGET: true,
 	}
-	for _, opt := range opts {
-		opt(r)
+	for _, o := range opts {
+		o(&cfg)
 	}
-	return r
+	if cfg.notFoundHandler == nil {
+		cfg.notFoundHandler = http.HandlerFunc(defaultNotFound)
+	}
+	if cfg.methodNotAllowedHandler == nil {
+		cfg.methodNotAllowedHandler = http.HandlerFunc(defaultMethodNotAllowed)
+	}
+	return &Router{
+		config: cfg,
+		byName: make(map[string]*registeredRoute),
+	}
 }
 
 // ServeHTTP implements http.Handler.
@@ -53,12 +76,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch err {
 		case ErrNotFound:
-			r.notFound.ServeHTTP(w, req)
+			r.config.notFoundHandler.ServeHTTP(w, req)
 		case ErrMethodNotAllowed:
-			r.methodNotAllowed.ServeHTTP(w, req)
+			r.config.methodNotAllowedHandler.ServeHTTP(w, req)
 		default:
-			if r.dispatchError != nil {
-				r.dispatchError.ServeHTTP(w, req)
+			if r.config.dispatchErrorHandler != nil {
+				r.config.dispatchErrorHandler.ServeHTTP(w, req)
 			} else {
 				http.Error(w, "500 internal server error", http.StatusInternalServerError)
 			}
@@ -69,7 +92,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if m.RedirectNeeded && m.CanonicalURL != nil {
 		code := m.Route.RedirectCode
 		if code == 0 {
-			code = r.defaultRedirectCode
+			code = r.config.defaultRedirectCode
 		}
 		if code == 0 {
 			code = http.StatusMovedPermanently
@@ -87,7 +110,7 @@ func (r *Router) Handle(route Route) error {
 	if route.Name == "" {
 		return ErrEmptyRouteName
 	}
-	if _, exists := r.routesByName[route.Name]; exists {
+	if _, exists := r.byName[route.Name]; exists {
 		return ErrDuplicateRoute
 	}
 	if route.Template == nil {
@@ -119,8 +142,14 @@ func (r *Router) Handle(route Route) error {
 		copy(stored.Constraints, route.Constraints)
 	}
 
-	r.routes = append(r.routes, &stored)
-	r.routesByName[stored.Name] = &stored
+	idx := len(r.routes)
+	reg := &registeredRoute{
+		Route: stored,
+		index: idx,
+		score: computeScore(&stored, nil, nil, idx),
+	}
+	r.routes = append(r.routes, reg)
+	r.byName[stored.Name] = reg
 	return nil
 }
 
@@ -164,7 +193,7 @@ func (r *Router) Match(req *http.Request) (*Match, error) {
 	// Compute canonical URL if applicable
 	policy := best.route.CanonicalPolicy
 	if policy == CanonicalIgnore {
-		policy = r.defaultCanonicalPolicy
+		policy = r.config.defaultCanonicalPolicy
 	}
 	if policy != CanonicalIgnore {
 		canonical, err := r.computeCanonical(best.route, best.params)
@@ -187,15 +216,15 @@ func (r *Router) Match(req *http.Request) (*Match, error) {
 
 // URL generates the full URL for the named route expanded with params (§12).
 func (r *Router) URL(name string, params Params) (*url.URL, error) {
-	route, ok := r.routesByName[name]
+	reg, ok := r.byName[name]
 	if !ok {
 		return nil, ErrUnknownRoute
 	}
 
-	merged := mergeParams(params, route.Defaults)
+	merged := mergeParams(params, reg.Defaults)
 	vals := paramsToValues(merged)
 
-	expanded, err := route.Template.Expand(vals)
+	expanded, err := reg.Template.Expand(vals)
 	if err != nil {
 		return nil, ErrMissingParam
 	}
@@ -222,25 +251,28 @@ func (r *Router) Path(name string, params Params) (string, error) {
 
 // Route returns the registered Route for the given name.
 func (r *Router) Route(name string) (*Route, bool) {
-	route, ok := r.routesByName[name]
-	return route, ok
+	reg, ok := r.byName[name]
+	if !ok {
+		return nil, false
+	}
+	return &reg.Route, true
 }
 
 // Routes returns read-only summaries of all registered routes (§15).
 func (r *Router) Routes() []RouteInfo {
 	infos := make([]RouteInfo, len(r.routes))
-	for i, rt := range r.routes {
+	for i, reg := range r.routes {
 		var meta map[string]string
-		if rt.Metadata != nil {
-			meta = make(map[string]string, len(rt.Metadata))
-			for k, v := range rt.Metadata {
+		if reg.Metadata != nil {
+			meta = make(map[string]string, len(reg.Metadata))
+			for k, v := range reg.Metadata {
 				meta[k] = v
 			}
 		}
 		infos[i] = RouteInfo{
-			Name:     rt.Name,
-			Template: rt.Template.String(),
-			Methods:  rt.Methods,
+			Name:     reg.Name,
+			Template: reg.Template.String(),
+			Methods:  reg.Methods,
 			Metadata: meta,
 		}
 	}
@@ -332,7 +364,9 @@ func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, met
 	// Build the request URI for template matching
 	matchURI := rc.URL.RequestURI()
 
-	for i, route := range r.routes {
+	for i, reg := range r.routes {
+		route := &reg.Route
+
 		// Attempt URI template reverse match
 		vals, ok := route.Template.Match(matchURI)
 		if !ok {
@@ -345,7 +379,7 @@ func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, met
 
 		// Template matched structurally - check method compatibility
 		methodOK := route.Methods.Has(reqMethod)
-		if !methodOK && r.implicitHEADFromGET && reqMethod == HEAD {
+		if !methodOK && r.config.implicitHEADFromGET && reqMethod == HEAD {
 			methodOK = route.Methods.Has(GET)
 		}
 		if !methodOK {
@@ -368,7 +402,7 @@ func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, met
 		// Enforce QueryMode
 		qm := route.QueryMode
 		if qm == QueryLoose {
-			qm = r.defaultQueryMode
+			qm = r.config.defaultQueryMode
 		}
 		if qm == QueryStrict {
 			// Check for undeclared query parameters
@@ -442,7 +476,7 @@ func defaultNotFound(w http.ResponseWriter, _ *http.Request) {
 
 // defaultMethodNotAllowed writes a plain 405 response.
 func defaultMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
-	http.Error(w, "405 method not allowed", http.StatusMethodNotAllowed)
+	http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 }
 
 // --- utility functions ------------------------------------------------------
