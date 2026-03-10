@@ -155,6 +155,63 @@ api := r.WithScope(
 api.GET("health", "/health", healthHandler)
 ```
 
+### Register RESTful resources
+
+`Resource` registers standard plural resource routes following Rails conventions. Only non-nil handlers are registered:
+
+```go
+r.Resource("posts", dispatch.ResourceHandlers{
+    Index:   http.HandlerFunc(listPosts),
+    Show:    http.HandlerFunc(showPost),
+    Create:  http.HandlerFunc(createPost),
+    Update:  http.HandlerFunc(updatePost),
+    Destroy: http.HandlerFunc(deletePost),
+})
+```
+
+This registers the following routes:
+
+| Method | Path | Route Name | Handler |
+|---|---|---|---|
+| GET | /posts | posts.index | Index |
+| GET | /posts/new | posts.new | New |
+| POST | /posts | posts.create | Create |
+| GET | /posts/{id} | posts.show | Show |
+| GET | /posts/{id}/edit | posts.edit | Edit |
+| PUT, PATCH | /posts/{id} | posts.update | Update |
+| DELETE | /posts/{id} | posts.destroy | Destroy |
+
+Member routes (show, edit, update, destroy) automatically include an `Int` constraint on the ID parameter.
+
+For a resource without a collection (no Index, no ID parameter), use `SingularResource`:
+
+```go
+r.SingularResource("account", dispatch.ResourceHandlers{
+    Show:   http.HandlerFunc(showAccount),
+    Update: http.HandlerFunc(updateAccount),
+})
+```
+
+This registers:
+
+| Method | Path | Route Name | Handler |
+|---|---|---|---|
+| GET | /account/new | account.new | New |
+| POST | /account | account.create | Create |
+| GET | /account | account.show | Show |
+| GET | /account/edit | account.edit | Edit |
+| PUT, PATCH | /account | account.update | Update |
+| DELETE | /account | account.destroy | Destroy |
+
+Customize resource registration with `ResourceOption` values:
+
+```go
+r.Resource("posts", handlers,
+    dispatch.WithParamName("post_id"),  // use {post_id} instead of {id}
+    dispatch.WithExcludePATCH(),        // Update matches PUT only
+)
+```
+
 ### Generate URLs
 
 Every route is reversible. Generate URLs from route names and parameters:
@@ -366,6 +423,15 @@ Pass these to `r.GET(...)` and other convenience methods:
 | `WithRedirectCode(int)` | HTTP status for canonical redirects |
 | `WithPriority(int)` | Explicit tie-breaker (higher wins) |
 | `WithMetadata(key, value)` | Attach opaque metadata |
+
+### Resource options
+
+Pass these to `r.Resource(...)` and `r.SingularResource(...)`:
+
+| Option | Description | Default |
+|---|---|---|
+| `WithParamName(name)` | Change the ID parameter name in member routes | `"id"` |
+| `WithExcludePATCH()` | Exclude PATCH from the Update action (PUT only) | both PUT and PATCH |
 
 ### Errors
 
