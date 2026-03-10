@@ -64,36 +64,6 @@ func New(opts ...Option) *Router {
 	}
 }
 
-// Route returns the registered Route for the given name.
-func (r *Router) Route(name string) (*Route, bool) {
-	reg, ok := r.byName[name]
-	if !ok {
-		return nil, false
-	}
-	return &reg.Route, true
-}
-
-// Routes returns read-only summaries of all registered routes (§15).
-func (r *Router) Routes() []RouteInfo {
-	infos := make([]RouteInfo, len(r.routes))
-	for i, reg := range r.routes {
-		var meta map[string]string
-		if reg.Metadata != nil {
-			meta = make(map[string]string, len(reg.Metadata))
-			for k, v := range reg.Metadata {
-				meta[k] = v
-			}
-		}
-		infos[i] = RouteInfo{
-			Name:     reg.Name,
-			Template: reg.Template.String(),
-			Methods:  reg.Methods,
-			Metadata: meta,
-		}
-	}
-	return infos
-}
-
 // Scope registers routes under a shared configuration scope (§9).
 func (r *Router) Scope(fn func(*Scope)) {
 	s := &Scope{router: r}
@@ -108,15 +78,6 @@ func (r *Router) WithScope(opts ...ScopeOption) *Scope {
 		opt(s)
 	}
 	return s
-}
-
-// RouteInfo is a read-only summary of a registered route for introspection
-// and debugging (§15).
-type RouteInfo struct {
-	Name     string
-	Template string
-	Methods  MethodSet
-	Metadata map[string]string
 }
 
 // --- internal helpers -------------------------------------------------------
