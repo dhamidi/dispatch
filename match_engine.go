@@ -2,7 +2,6 @@ package dispatch
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/dhamidi/uritemplate"
@@ -99,7 +98,7 @@ func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, met
 	// Build the request URI for template matching
 	matchURI := rc.URL.RequestURI()
 
-	for i, reg := range r.routes {
+	for _, reg := range r.routes {
 		route := &reg.Route
 
 		// Phase 4 — URI template reverse match
@@ -162,7 +161,16 @@ func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, met
 
 		// Phase 8 — Score candidate
 		{
-			score := computeScore(route, params, rc.URL, i)
+			score := reg.score // start from precomputed structural hints
+			// Compute dynamic query matches at match time
+			if rc.URL != nil {
+				vars := templateVarNames(route.Template)
+				for key := range rc.URL.Query() {
+					if _, ok := vars[key]; ok {
+						score.QueryMatches++
+					}
+				}
+			}
 			matched = append(matched, &candidate{
 				route:  route,
 				params: params,
@@ -255,47 +263,3 @@ func templateVarNames(t *uritemplate.Template) map[string]struct{} {
 	return vars
 }
 
-// computeScore computes the [candidateScore] for a route given its match
-// parameters and the request URL.
-func computeScore(route *Route, params Params, reqURL *url.URL, registrationIdx int) candidateScore {
-	raw := route.Template.String()
-
-	// Count literal characters (non-expression, non-separator)
-	litChars := 0
-	inExpr := false
-	for i := 0; i < len(raw); i++ {
-		if raw[i] == '{' {
-			inExpr = true
-		} else if raw[i] == '}' {
-			inExpr = false
-		} else if !inExpr {
-			litChars++
-		}
-	}
-
-	// Count query matches
-	queryMatches := 0
-	vars := templateVarNames(route.Template)
-	if reqURL != nil {
-		for key := range reqURL.Query() {
-			if _, ok := vars[key]; ok {
-				queryMatches++
-			}
-		}
-	}
-
-	constrainedVars := len(route.Constraints)
-	broadVars := len(vars) - constrainedVars
-	if broadVars < 0 {
-		broadVars = 0
-	}
-
-	return candidateScore{
-		LiteralSegments: litChars,
-		ConstrainedVars: constrainedVars,
-		BroadVars:       broadVars,
-		QueryMatches:    queryMatches,
-		Priority:        route.Priority,
-		Registration:    registrationIdx,
-	}
-}
