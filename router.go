@@ -65,8 +65,12 @@ func New(opts ...Option) *Router {
 }
 
 // Scope registers routes under a shared configuration scope (§9).
-func (r *Router) Scope(fn func(*Scope)) {
+// Optional ScopeOption values configure the scope before fn is called.
+func (r *Router) Scope(fn func(*Scope), opts ...ScopeOption) {
 	s := &Scope{router: r}
+	for _, o := range opts {
+		o(s)
+	}
 	fn(s)
 }
 

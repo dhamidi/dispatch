@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/dhamidi/uritemplate"
 )
@@ -43,8 +44,9 @@ type ScopeOption func(*Scope)
 
 // WithNamePrefix sets the name prefix for the scope.
 // Names are composed with "." as separator (e.g. "admin" + "users.show" -> "admin.users.show").
+// A trailing "." in prefix is stripped to avoid double separators.
 func WithNamePrefix(prefix string) ScopeOption {
-	return func(s *Scope) { s.namePrefix = prefix }
+	return func(s *Scope) { s.namePrefix = strings.TrimRight(prefix, ".") }
 }
 
 // WithTemplatePrefix sets the URI template prefix prepended to route templates.
