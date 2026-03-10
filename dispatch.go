@@ -8,57 +8,8 @@
 package dispatch
 
 import (
-	"net/http"
 	"net/url"
-
-	"github.com/dhamidi/uritemplate"
 )
-
-
-// Route defines a semantic endpoint.
-type Route struct {
-	// Name is the stable application-defined identifier. Must be non-empty
-	// and unique within a router instance.
-	Name string
-
-	// Methods is the set of allowed HTTP methods. Must not be zero.
-	Methods MethodSet
-
-	// Template is the parsed URI template used for matching and URL generation.
-	// Must not be nil.
-	Template *uritemplate.Template
-
-	// Handler is the http.Handler invoked when this route is selected.
-	// Must not be nil for dispatchable routes.
-	Handler http.Handler
-
-	// Defaults provides fallback values for template variables not present in
-	// the request. Applied after extraction; never overrides extracted values.
-	Defaults Params
-
-	// Constraints are post-match refinement rules evaluated in order.
-	Constraints []Constraint
-
-	// QueryMode controls undeclared query parameter behavior.
-	// Defaults to QueryLoose if unset.
-	QueryMode QueryMode
-
-	// CanonicalPolicy controls canonical URL enforcement behavior.
-	// Defaults to CanonicalIgnore if unset.
-	CanonicalPolicy CanonicalPolicy
-
-	// RedirectCode is the HTTP status code used for canonical redirects.
-	// Should default to http.StatusMovedPermanently (301) if zero and
-	// CanonicalRedirect is active.
-	RedirectCode int
-
-	// Priority is an explicit tie-breaker. Higher values win.
-	Priority int
-
-	// Metadata is an optional application-defined string map treated as
-	// opaque by the router.
-	Metadata map[string]string
-}
 
 // candidateScore holds the scoring breakdown used for deterministic
 // multi-candidate selection (§10.7.2).
