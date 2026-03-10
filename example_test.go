@@ -2,6 +2,7 @@ package dispatch_test
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 
@@ -34,4 +35,40 @@ func Example_basicRouting() {
 	// Output:
 	// 200
 	// route=users.show id=42
+}
+
+func ExampleRouter_URL() {
+	r := dispatch.New()
+
+	if err := r.GET("users.show", "/users/{id}",
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {}),
+	); err != nil {
+		log.Fatal(err)
+	}
+
+	u, err := r.URL("users.show", dispatch.Params{"id": "42"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(u.String())
+	// Output:
+	// /users/42
+}
+
+func ExampleRouter_Path() {
+	r := dispatch.New()
+
+	if err := r.GET("search", "/search{?q,page}",
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {}),
+	); err != nil {
+		log.Fatal(err)
+	}
+
+	path, err := r.Path("search", dispatch.Params{"q": "golang", "page": "2"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(path)
+	// Output:
+	// /search?q=golang&page=2
 }
