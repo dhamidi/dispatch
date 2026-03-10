@@ -24,19 +24,6 @@ type RequestContext struct {
 	Host    string
 }
 
-// Constraint refines a candidate route after URI template extraction.
-// Implementations must be side-effect free and must not mutate Params.
-type Constraint interface {
-	Check(*RequestContext, Params) bool
-}
-
-// ConstraintFunc is a function adapter that implements Constraint.
-type ConstraintFunc func(*RequestContext, Params) bool
-
-// Check implements Constraint.
-func (f ConstraintFunc) Check(rc *RequestContext, p Params) bool {
-	return f(rc, p)
-}
 
 // Route defines a semantic endpoint.
 type Route struct {
