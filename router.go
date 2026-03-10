@@ -417,7 +417,7 @@ func (r *Router) selectBest(candidates []*candidate) *candidate {
 	}
 	best := candidates[0]
 	for _, c := range candidates[1:] {
-		if best.score.less(c.score) {
+		if c.score.beats(best.score) {
 			best = c
 		}
 	}

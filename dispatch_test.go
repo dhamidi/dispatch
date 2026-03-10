@@ -57,11 +57,11 @@ func TestMethodSetContains(t *testing.T) {
 	}
 }
 
-func TestCandidateScoreLess(t *testing.T) {
+func TestCandidateScoreBeats(t *testing.T) {
 	a := candidateScore{LiteralSegments: 5, Registration: 0}
 	b := candidateScore{LiteralSegments: 3, Registration: 1}
-	if !b.less(a) {
-		t.Error("b should lose to a (fewer literal segments)")
+	if !a.beats(b) {
+		t.Error("a should beat b (more literal segments)")
 	}
 }
 
