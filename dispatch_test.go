@@ -623,6 +623,66 @@ func TestSlashRedirectParameterizedExactMatch(t *testing.T) {
 	}
 }
 
+func TestSlashRedirectLiteralExactMatchWithQueryString(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("admin", "/admin/", h)
+
+	// /admin/?foo=bar → 200 (exact path match, query preserved)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/admin/?foo=bar", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 for exact match with query, got %d", w.Code)
+	}
+}
+
+func TestSlashRedirectParameterizedTrailingSlashWithQueryString(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("posts.show", "/posts/{id}", h)
+
+	// /posts/42/?detail=true → 301 to /posts/42?detail=true
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/posts/42/?detail=true", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusMovedPermanently {
+		t.Errorf("expected 301, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/posts/42?detail=true" {
+		t.Errorf("expected redirect to /posts/42?detail=true, got %s", loc)
+	}
+}
+
+func TestParameterizedRouteWithQueryStringNoAbsorption(t *testing.T) {
+	r := New()
+	h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		m, ok := MatchFromContext(req.Context())
+		if !ok {
+			t.Error("no match in context")
+			return
+		}
+		if m.Params.Get("id") != "42" {
+			t.Errorf("expected id=42, got %s", m.Params.Get("id"))
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("posts.show", "/posts/{id}", h)
+
+	// /posts/42?detail=true → 200 with id=42 (query not absorbed into param)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/posts/42?detail=true", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
 func TestSlashIgnoreDefault(t *testing.T) {
 	r := New()
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

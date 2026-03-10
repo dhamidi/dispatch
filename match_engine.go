@@ -95,20 +95,38 @@ type candidate struct {
 func (r *Router) filterCandidates(rc *RequestContext) (matched []*candidate, methodMismatch bool) {
 	reqMethod := methodBit(rc.Method)
 
-	// Build the request URI for template matching
+	// Build match URIs for template matching.
+	// For templates with query expressions (e.g., /search{?q}), we use the
+	// full RequestURI so query parameters are extracted. For path-only
+	// templates, we use just the path to prevent query strings from being
+	// absorbed into path parameters or causing literal templates to fail.
+	matchPath := rc.URL.Path
+	if rc.URL.RawPath != "" {
+		matchPath = rc.URL.RawPath
+	}
 	matchURI := rc.URL.RequestURI()
 
 	for _, reg := range r.routes {
 		route := &reg.Route
 
 		// Phase 4 — URI template reverse match
-		vals, ok := route.Template.Match(matchURI)
-		if !ok {
-			// Also try matching with just the URL for templates without query expressions
-			vals, ok = route.Template.FromURL(rc.URL)
+		var vals uritemplate.Values
+		var ok bool
+		if hasQueryExpression(route.Template) {
+			// Template declares query variables — use full URI to extract them
+			vals, ok = route.Template.Match(matchURI)
 			if !ok {
-				continue
+				vals, ok = route.Template.FromURL(rc.URL)
 			}
+		} else {
+			// Path-only template — match on path to avoid query interference
+			vals, ok = route.Template.Match(matchPath)
+			if !ok {
+				vals, ok = route.Template.FromURL(rc.URL)
+			}
+		}
+		if !ok {
+			continue
 		}
 
 		// Phase 3 — Filter by method compatibility
@@ -221,6 +239,26 @@ func valuesToParams(vals uritemplate.Values) Params {
 		}
 	}
 	return p
+}
+
+// hasQueryExpression reports whether a template contains query-style expressions
+// (operators ? or &), e.g., /search{?q} or /items{&page,size}.
+func hasQueryExpression(t *uritemplate.Template) bool {
+	raw := t.String()
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == '{' {
+			end := strings.IndexByte(raw[i:], '}')
+			if end < 0 {
+				break
+			}
+			body := raw[i+1 : i+end]
+			if len(body) > 0 && (body[0] == '?' || body[0] == '&') {
+				return true
+			}
+			i += end
+		}
+	}
+	return false
 }
 
 // templateVarNames extracts variable names declared in a [uritemplate.Template]
