@@ -69,41 +69,6 @@ func New(opts ...Option) *Router {
 	}
 }
 
-// ServeHTTP implements http.Handler.
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	m, err := r.Match(req)
-	if err != nil {
-		switch err {
-		case ErrNotFound:
-			r.config.notFoundHandler.ServeHTTP(w, req)
-		case ErrMethodNotAllowed:
-			r.config.methodNotAllowedHandler.ServeHTTP(w, req)
-		default:
-			if r.config.dispatchErrorHandler != nil {
-				r.config.dispatchErrorHandler.ServeHTTP(w, req)
-			} else {
-				http.Error(w, "500 internal server error", http.StatusInternalServerError)
-			}
-		}
-		return
-	}
-
-	if m.RedirectNeeded && m.CanonicalURL != nil {
-		code := m.Route.RedirectCode
-		if code == 0 {
-			code = r.config.defaultRedirectCode
-		}
-		if code == 0 {
-			code = http.StatusMovedPermanently
-		}
-		http.Redirect(w, req, m.CanonicalURL.String(), code)
-		return
-	}
-
-	ctx := withMatch(req.Context(), m)
-	m.Route.Handler.ServeHTTP(w, req.WithContext(ctx))
-}
-
 // URL generates the full URL for the named route expanded with params (§12).
 func (r *Router) URL(name string, params Params) (*url.URL, error) {
 	reg, ok := r.byName[name]
