@@ -424,6 +424,26 @@ Pass these to `r.GET(...)` and other convenience methods:
 | `WithPriority(int)` | Explicit tie-breaker (higher wins) |
 | `WithMetadata(key, value)` | Attach opaque metadata |
 
+### Scope options
+
+Pass these to `r.Scope(...)` or `r.WithScope(...)`:
+
+| Option | Description |
+|---|---|
+| `WithNamePrefix(prefix)` | Prepend prefix to route names (separated by `.`) |
+| `WithTemplatePrefix(prefix)` | Prepend prefix to URI templates |
+| `WithScopeDefaults(params)` | Merge default parameters into scoped routes |
+| `WithScopeConstraint(c)` | Append constraint to all scoped routes |
+| `WithScopeQueryMode(qm)` | Override query mode for scoped routes |
+| `WithScopeCanonicalPolicy(cp)` | Override canonical policy for scoped routes |
+| `WithScopeMetadata(key, value)` | Attach metadata to all scoped routes |
+
+Scopes expose the same convenience methods as `Router`:
+
+- `s.GET(name, tmpl, handler, opts...)`, `s.POST(...)`, `s.PUT(...)`, `s.PATCH(...)`, `s.DELETE(...)`
+- `s.Handle(route Route) error`
+- `s.Scope(fn func(*Scope), opts ...ScopeOption)` — nested scoping
+
 ### Resource options
 
 Pass these to `r.Resource(...)` and `r.SingularResource(...)`:
@@ -432,6 +452,27 @@ Pass these to `r.Resource(...)` and `r.SingularResource(...)`:
 |---|---|---|
 | `WithParamName(name)` | Change the ID parameter name in member routes | `"id"` |
 | `WithExcludePATCH()` | Exclude PATCH from the Update action (PUT only) | both PUT and PATCH |
+
+### MethodSet
+
+`MethodSet` is a bitfield representing a set of HTTP methods. Individual methods (`GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `TRACE`, `CONNECT`) are constants that can be combined with bitwise OR.
+
+| Method / Constructor | Signature | Description |
+|---|---|---|
+| `Has` | `(ms MethodSet) Has(other MethodSet) bool` | Reports whether `ms` includes every method in `other` |
+| `String` | `(ms MethodSet) String() string` | Pipe-separated list of methods (e.g. `"GET\|HEAD"`); empty set returns `"<none>"` |
+| `MethodFromString` | `MethodFromString(method string) (MethodSet, error)` | Convert a standard HTTP method string to its `MethodSet` bit (case-sensitive) |
+| `MethodSetFrom` | `MethodSetFrom(methods ...string) (MethodSet, error)` | Convert one or more method name strings to a combined `MethodSet` (case-insensitive) |
+
+### Params
+
+`Params` is a `map[string]string` holding route parameters.
+
+| Method | Signature | Description |
+|---|---|---|
+| `Get` | `(p Params) Get(key string) string` | Returns the value for key, or `""` if missing |
+| `Lookup` | `(p Params) Lookup(key string) (string, bool)` | Returns value and whether the key was present |
+| `Clone` | `(p Params) Clone() Params` | Returns a shallow copy; mutations do not affect the original |
 
 ### Errors
 
@@ -446,6 +487,10 @@ Matching errors:
 
 - `ErrNotFound` — no route matches
 - `ErrMethodNotAllowed` — URL matches but method does not
+
+Method parsing errors:
+
+- `*MethodError` — unrecognised HTTP method name (returned by `MethodSetFrom`)
 
 Parameter extraction errors:
 
