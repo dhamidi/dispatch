@@ -39,6 +39,12 @@ func WithDefaultRedirectCode(code int) Option {
 	return func(cfg *routerConfig) { cfg.defaultRedirectCode = code }
 }
 
+// WithDefaultSlashPolicy sets the SlashPolicy applied when determining
+// trailing-slash normalization behavior. Defaults to SlashIgnore.
+func WithDefaultSlashPolicy(p SlashPolicy) Option {
+	return func(cfg *routerConfig) { cfg.defaultSlashPolicy = p }
+}
+
 // WithImplicitHEAD controls whether GET routes also match HEAD requests.
 // Enabled by default.
 func WithImplicitHEAD(enabled bool) Option {

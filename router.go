@@ -9,6 +9,7 @@ type routerConfig struct {
 	dispatchErrorHandler    http.Handler
 	defaultQueryMode        QueryMode
 	defaultCanonicalPolicy  CanonicalPolicy
+	defaultSlashPolicy      SlashPolicy
 	defaultRedirectCode     int
 	implicitHEADFromGET     bool
 }

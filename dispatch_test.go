@@ -530,3 +530,111 @@ func TestContextReflectsSelectedRoute(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/42", nil)
 	r.ServeHTTP(w, req)
 }
+
+func TestSlashRedirectLiteralNoSlashToSlash(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("admin", "/admin/", h)
+
+	// /admin → 301 to /admin/
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/admin", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusMovedPermanently {
+		t.Errorf("expected 301, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/admin/" {
+		t.Errorf("expected redirect to /admin/, got %s", loc)
+	}
+}
+
+func TestSlashRedirectLiteralWithQueryString(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("admin", "/admin/", h)
+
+	// /admin?foo=bar → 301 to /admin/?foo=bar
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/admin?foo=bar", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusMovedPermanently {
+		t.Errorf("expected 301, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/admin/?foo=bar" {
+		t.Errorf("expected redirect to /admin/?foo=bar, got %s", loc)
+	}
+}
+
+func TestSlashRedirectParameterizedTrailingSlash(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("posts.show", "/posts/{id}", h)
+
+	// /posts/42/ → 301 to /posts/42
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/posts/42/", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusMovedPermanently {
+		t.Errorf("expected 301, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/posts/42" {
+		t.Errorf("expected redirect to /posts/42, got %s", loc)
+	}
+}
+
+func TestSlashRedirectExactMatch(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("admin", "/admin/", h)
+
+	// /admin/ → 200 (exact match, no redirect)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/admin/", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 for exact match, got %d", w.Code)
+	}
+}
+
+func TestSlashRedirectParameterizedExactMatch(t *testing.T) {
+	r := New(WithDefaultSlashPolicy(SlashRedirect))
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("posts.show", "/posts/{id}", h)
+
+	// /posts/42 → 200 (exact match, no redirect)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/posts/42", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 for exact match, got %d", w.Code)
+	}
+}
+
+func TestSlashIgnoreDefault(t *testing.T) {
+	r := New()
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.GET("admin", "/admin/", h)
+
+	// With SlashIgnore (default), /admin → 404
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/admin", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404 with SlashIgnore, got %d", w.Code)
+	}
+}

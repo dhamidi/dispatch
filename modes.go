@@ -60,6 +60,36 @@ const (
 	CanonicalReject
 )
 
+// SlashPolicy controls trailing-slash normalization behavior.
+type SlashPolicy uint8
+
+const (
+	// SlashIgnore performs no trailing-slash normalization. A request for
+	// /admin will not match a route registered as /admin/ and vice versa.
+	SlashIgnore SlashPolicy = iota
+
+	// SlashRedirect enables trailing-slash normalization. When a request
+	// does not match any route but would match with the trailing slash
+	// toggled, the router issues an HTTP redirect to the corrected URL.
+	// For parameterized routes, a trailing slash in the request path is
+	// normalized before matching to prevent it from being absorbed into a
+	// path parameter.
+	SlashRedirect
+)
+
+// String returns the name of the SlashPolicy constant or a numeric
+// representation for unknown values.
+func (p SlashPolicy) String() string {
+	switch p {
+	case SlashIgnore:
+		return "SlashIgnore"
+	case SlashRedirect:
+		return "SlashRedirect"
+	default:
+		return fmt.Sprintf("SlashPolicy(%d)", p)
+	}
+}
+
 // String returns the name of the CanonicalPolicy constant or a numeric
 // representation for unknown values.
 func (p CanonicalPolicy) String() string {
