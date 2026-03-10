@@ -225,7 +225,7 @@ func TestRouterPathGeneration(t *testing.T) {
 func TestRouterURLUnknownRoute(t *testing.T) {
 	r := New()
 	_, err := r.URL("nonexistent", nil)
-	if err != ErrUnknownRoute {
+	if !errors.Is(err, ErrUnknownRoute) {
 		t.Errorf("expected ErrUnknownRoute, got %v", err)
 	}
 }

@@ -2,7 +2,6 @@ package dispatch
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/dhamidi/uritemplate"
 )
@@ -67,41 +66,6 @@ func New(opts ...Option) *Router {
 		config: cfg,
 		byName: make(map[string]*registeredRoute),
 	}
-}
-
-// URL generates the full URL for the named route expanded with params (§12).
-func (r *Router) URL(name string, params Params) (*url.URL, error) {
-	reg, ok := r.byName[name]
-	if !ok {
-		return nil, ErrUnknownRoute
-	}
-
-	merged := mergeParams(params, reg.Defaults)
-	vals := paramsToValues(merged)
-
-	expanded, err := reg.Template.Expand(vals)
-	if err != nil {
-		return nil, ErrMissingParam
-	}
-
-	u, err := url.Parse(expanded)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
-}
-
-// Path generates the path string for the named route expanded with params.
-func (r *Router) Path(name string, params Params) (string, error) {
-	u, err := r.URL(name, params)
-	if err != nil {
-		return "", err
-	}
-	result := u.Path
-	if u.RawQuery != "" {
-		result += "?" + u.RawQuery
-	}
-	return result, nil
 }
 
 // Route returns the registered Route for the given name.

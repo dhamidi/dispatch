@@ -265,19 +265,6 @@ func valuesToParams(vals uritemplate.Values) Params {
 	return p
 }
 
-// mergeParams merges provided params with defaults. Provided params take
-// precedence.
-func mergeParams(provided, defaults Params) Params {
-	result := make(Params)
-	for k, v := range defaults {
-		result[k] = v
-	}
-	for k, v := range provided {
-		result[k] = v
-	}
-	return result
-}
-
 // templateVarNames extracts variable names declared in a [uritemplate.Template]
 // by parsing the raw template string.
 func templateVarNames(t *uritemplate.Template) map[string]struct{} {
