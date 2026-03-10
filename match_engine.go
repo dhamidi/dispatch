@@ -64,10 +64,10 @@ func (r *Router) Match(req *http.Request) (*Match, error) {
 		policy = r.config.defaultCanonicalPolicy
 	}
 	if policy != CanonicalIgnore {
-		canonical, err := r.computeCanonical(best.route, best.params)
+		canonical, err := computeCanonicalURL(best.route, best.params)
 		if err == nil && canonical != nil {
 			m.CanonicalURL = canonical
-			m.IsCanonical = isCanonicalMatch(&reqURL, canonical)
+			m.IsCanonical = isCanonicalURL(&reqURL, canonical)
 
 			// Phase 11 — Decide dispatch, redirect, or rejection
 			if !m.IsCanonical {
@@ -190,63 +190,13 @@ func (r *Router) selectBest(candidates []*candidate) *candidate {
 	return best
 }
 
-// computeCanonical expands the matched route template with final params and
-// returns the canonical *url.URL.
-func (r *Router) computeCanonical(route *Route, params Params) (*url.URL, error) {
-	vals := paramsToValues(params)
-	expanded, err := route.Template.Expand(vals)
-	if err != nil {
-		return nil, err
-	}
-	return url.Parse(expanded)
-}
-
 // methodBit maps an HTTP method string to its [MethodSet] constant,
 // returning 0 for unknown methods.
 func methodBit(method string) MethodSet {
 	return methodFromString(method)
 }
 
-// isCanonicalMatch reports whether the request URL and the canonical URL are
-// equivalent. Paths are compared case-sensitively. Query parameters are
-// compared order-independently.
-func isCanonicalMatch(reqURL, canonical *url.URL) bool {
-	if reqURL == nil || canonical == nil {
-		return true
-	}
-	if reqURL.Path != canonical.Path {
-		return false
-	}
-	// Compare query parameters (order-independent)
-	reqQuery := reqURL.Query()
-	canonQuery := canonical.Query()
-	if len(reqQuery) != len(canonQuery) {
-		return false
-	}
-	for k, rv := range reqQuery {
-		cv, ok := canonQuery[k]
-		if !ok || len(rv) != len(cv) {
-			return false
-		}
-		for i := range rv {
-			if rv[i] != cv[i] {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // --- utility functions ------------------------------------------------------
-
-// paramsToValues converts [Params] to [uritemplate.Values].
-func paramsToValues(p Params) uritemplate.Values {
-	vals := make(uritemplate.Values, len(p))
-	for k, v := range p {
-		vals[k] = uritemplate.String(v)
-	}
-	return vals
-}
 
 // valuesToParams converts [uritemplate.Values] to [Params] by expanding each
 // value through a single-variable template.
