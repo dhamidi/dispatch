@@ -16,13 +16,6 @@ var (
 	// ErrNilHandler is returned when a dispatchable route has a nil handler.
 	ErrNilHandler = errors.New("dispatch: nil handler")
 
-	// ErrInvalidMethodSet is returned when a route's method set is zero.
-	ErrInvalidMethodSet = errors.New("dispatch: invalid (zero) method set")
-
-	// ErrInvalidRedirectCode is returned when a redirect code is set to an
-	// invalid value while CanonicalRedirect policy is active.
-	ErrInvalidRedirectCode = errors.New("dispatch: invalid redirect code")
-
 	// ErrUnknownRoute is returned when URL generation references an unknown name.
 	ErrUnknownRoute = errors.New("dispatch: unknown route name")
 
