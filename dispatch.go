@@ -15,16 +15,6 @@ import (
 )
 
 
-// RequestContext holds request attributes used during routing and constraint
-// evaluation.
-type RequestContext struct {
-	Request *http.Request
-	URL     *url.URL
-	Method  string
-	Host    string
-}
-
-
 // Route defines a semantic endpoint.
 type Route struct {
 	// Name is the stable application-defined identifier. Must be non-empty
