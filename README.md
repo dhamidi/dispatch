@@ -206,6 +206,80 @@ func showUser(w http.ResponseWriter, req *http.Request) {
 }
 ```
 
+### Extract typed parameters in handlers
+
+Use the `Param*` helpers to extract and convert route parameters directly from the request, instead of manually reading from the match context:
+
+```go
+func showUser(w http.ResponseWriter, req *http.Request) {
+    id, err := dispatch.ParamInt(req, "id")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    fmt.Fprintf(w, "user=%d", id)
+}
+```
+
+Available extraction functions:
+
+| Function | Return type | Description |
+|---|---|---|
+| `ParamString(r, name)` | `(string, bool)` | Raw string value; false if missing |
+| `ParamInt(r, name)` | `(int, error)` | Base-10 integer |
+| `ParamInt64(r, name)` | `(int64, error)` | Base-10 int64 |
+| `ParamFloat64(r, name)` | `(float64, error)` | 64-bit float |
+| `ParamBool(r, name)` | `(bool, error)` | Accepts true/false, 1/0, yes/no (case-insensitive) |
+| `MustParamInt(r, name)` | `int` | Panics on error |
+| `MustParamInt64(r, name)` | `int64` | Panics on error |
+| `ParamAs(r, name, dest)` | `error` | Custom parsing via `ParamValue` interface |
+
+When a route has a constraint that guarantees the parameter is valid (e.g. `dispatch.Int("id")`), use the `Must` variants to skip error handling:
+
+```go
+r.GET("users.show", "/users/{id}",
+    http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+        id := dispatch.MustParamInt(req, "id") // safe — Int constraint already validated
+        fmt.Fprintf(w, "user=%d", id)
+    }),
+    dispatch.WithConstraint(dispatch.Int("id")),
+)
+```
+
+For custom types, implement `ParamValue` (a single `Set(string) error` method, mirroring `flag.Value`) and use `ParamAs`:
+
+```go
+type UserRole int
+
+const (
+    RoleAdmin UserRole = iota
+    RoleEditor
+)
+
+func (r *UserRole) Set(raw string) error {
+    switch raw {
+    case "admin":
+        *r = RoleAdmin
+    case "editor":
+        *r = RoleEditor
+    default:
+        return fmt.Errorf("unknown role %q", raw)
+    }
+    return nil
+}
+
+func handleRole(w http.ResponseWriter, req *http.Request) {
+    var role UserRole
+    if err := dispatch.ParamAs(req, "role", &role); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    fmt.Fprintf(w, "role=%d", role)
+}
+```
+
+Parse errors are returned as `*ParamError`, which wraps the underlying error and includes the parameter name and raw value. Missing parameters return `ErrParamNotFound`.
+
 ### Control query parameter handling
 
 Set the query mode per route or as a router default:
@@ -292,6 +366,11 @@ Matching errors:
 
 - `ErrNotFound` — no route matches
 - `ErrMethodNotAllowed` — URL matches but method does not
+
+Parameter extraction errors:
+
+- `ErrParamNotFound` — named parameter not present in the match context
+- `*ParamError` — parameter value could not be parsed (wraps the underlying error, includes parameter name and raw value)
 
 Generation errors:
 
