@@ -120,11 +120,17 @@ func (r *Router) makeHelperFunc(routeName string, varNames []string, funcType re
 	})
 }
 
+var paramValueType = reflect.TypeOf((*ParamValue)(nil)).Elem()
+
 // helperArgToString converts a reflect.Value to its string representation
-// for use as a route parameter. If the value implements fmt.Stringer, that
-// takes precedence over the default numeric/bool formatting.
+// for use as a route parameter. ParamValue and fmt.Stringer implementations
+// take precedence over the default numeric/bool formatting.
 func helperArgToString(v reflect.Value) string {
-	// Check fmt.Stringer first so named types with a String method
+	// ParamValue types know how to format themselves as URL params.
+	if v.Type().Implements(paramValueType) {
+		return v.Interface().(ParamValue).String()
+	}
+	// Check fmt.Stringer so named types with a String method
 	// use their custom formatting rather than the underlying kind.
 	if v.Type().Implements(stringerType) {
 		return v.Interface().(fmt.Stringer).String()
@@ -178,7 +184,7 @@ func validateHelperArgType(t reflect.Type, fieldName string, argIdx int) {
 		reflect.Bool:
 		return
 	default:
-		if t.Implements(stringerType) {
+		if t.Implements(paramValueType) || t.Implements(stringerType) {
 			return
 		}
 		panic(fmt.Sprintf(

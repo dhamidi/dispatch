@@ -278,6 +278,37 @@ func TestBindHelpers_ScopedRoutes(t *testing.T) {
 	}
 }
 
+// paramValueSlug is a ParamValue type for testing BindHelpers integration.
+type paramValueSlug struct {
+	value string
+}
+
+func (p paramValueSlug) String() string {
+	return p.value
+}
+
+func (p *paramValueSlug) Set(raw string) error {
+	p.value = raw
+	return nil
+}
+
+func TestBindHelpers_ParamValueArg(t *testing.T) {
+	r := New()
+	if err := r.GET("posts.byslug", "/posts/{slug}", noopHandler); err != nil {
+		t.Fatal(err)
+	}
+	var urls struct {
+		PostsBySlug func(slug paramValueSlug) string `route:"posts.byslug"`
+	}
+	r.BindHelpers(&urls)
+
+	slug := paramValueSlug{value: "my-post"}
+	got := urls.PostsBySlug(slug)
+	if got != "/posts/my-post" {
+		t.Errorf("expected /posts/my-post, got %s", got)
+	}
+}
+
 func TestBindHelpers_BoolAndFloat(t *testing.T) {
 	r := New()
 	if err := r.GET("f", "/f/{val}", noopHandler); err != nil {

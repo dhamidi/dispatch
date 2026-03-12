@@ -304,7 +304,7 @@ r.GET("users.show", "/users/{id}",
 )
 ```
 
-For custom types, implement `ParamValue` (a single `Set(string) error` method, mirroring `flag.Value`) and use `ParamAs`:
+For custom types, implement `ParamValue` (`String() string` and `Set(string) error`, mirroring `flag.Value`) and use `ParamAs`. The `String()` method enables reverse routing / URL generation via `BindHelpers`:
 
 ```go
 type UserRole int
@@ -313,6 +313,17 @@ const (
     RoleAdmin UserRole = iota
     RoleEditor
 )
+
+func (r UserRole) String() string {
+    switch r {
+    case RoleAdmin:
+        return "admin"
+    case RoleEditor:
+        return "editor"
+    default:
+        return fmt.Sprintf("unknown(%d)", int(r))
+    }
+}
 
 func (r *UserRole) Set(raw string) error {
     switch raw {

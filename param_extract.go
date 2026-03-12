@@ -25,9 +25,12 @@ func (e *ParamError) Error() string {
 
 func (e *ParamError) Unwrap() error { return e.Err }
 
-// ParamValue converts a raw string parameter to a typed value.
-// This mirrors flag.Value but is focused on parsing (not formatting).
+// ParamValue converts between a raw string parameter and a typed value.
+// This mirrors flag.Value so that types supporting inbound parsing
+// can also participate in reverse routing (URL generation).
 type ParamValue interface {
+	// String returns the value formatted as a URL parameter string.
+	String() string
 	// Set parses the raw string value. Returns an error if parsing fails.
 	Set(raw string) error
 }

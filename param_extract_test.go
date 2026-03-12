@@ -247,6 +247,10 @@ type testParamValue struct {
 	parsed string
 }
 
+func (v *testParamValue) String() string {
+	return v.parsed
+}
+
 func (v *testParamValue) Set(raw string) error {
 	if raw == "bad" {
 		return fmt.Errorf("invalid value")
@@ -298,6 +302,38 @@ func TestParamAs(t *testing.T) {
 			t.Errorf("err = %v, want ErrParamNotFound", err)
 		}
 	})
+}
+
+// roundTripValue is a ParamValue that stores raw strings directly,
+// enabling exact round-trip fidelity for testing.
+type roundTripValue struct {
+	raw string
+}
+
+func (v *roundTripValue) String() string { return v.raw }
+func (v *roundTripValue) Set(raw string) error {
+	v.raw = raw
+	return nil
+}
+
+func TestParamValue_RoundTrip(t *testing.T) {
+	var v roundTripValue
+	if err := v.Set("hello-world"); err != nil {
+		t.Fatalf("Set returned error: %v", err)
+	}
+	s := v.String()
+	if s != "hello-world" {
+		t.Fatalf("String() = %q, want %q", s, "hello-world")
+	}
+
+	// Re-parse the output of String() and verify we get the same result.
+	var v2 roundTripValue
+	if err := v2.Set(s); err != nil {
+		t.Fatalf("Set(String()) returned error: %v", err)
+	}
+	if v2.String() != v.String() {
+		t.Errorf("round-trip failed: Set(%q).String() = %q, want %q", s, v2.String(), v.String())
+	}
 }
 
 func TestParamError_Unwrap(t *testing.T) {
