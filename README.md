@@ -601,6 +601,48 @@ Available fuzz targets:
 | `FuzzServeHTTP` | `fuzz_serve_test.go` | Full dispatch with slash redirect policy |
 | `FuzzServeHTTPComplex` | `fuzz_serve_test.go` | Dispatch with slash redirect and canonical annotate policies |
 
+### Benchmarks
+
+The package includes comprehensive benchmarks covering all critical hot paths. Run them with:
+
+```sh
+go test -bench=. -benchmem ./...
+```
+
+Compare performance before and after changes using `benchstat`:
+
+```sh
+go test -bench=. -benchmem -count=6 ./... > old.txt
+# make changes
+go test -bench=. -benchmem -count=6 ./... > new.txt
+benchstat old.txt new.txt
+```
+
+Profile a specific benchmark:
+
+```sh
+go test -bench=BenchmarkMatch -cpuprofile=cpu.out ./...
+go tool pprof cpu.out
+```
+
+Available benchmark groups:
+
+| Benchmark group | What it measures |
+|---|---|
+| `BenchmarkMatch_Static_*` | Static route matching at 5, 50, 200 route scales |
+| `BenchmarkMatch_Parameterized_*` | Parameterized route matching at various scales |
+| `BenchmarkMatch_Scaling` | O(n) scaling of route matching with route count |
+| `BenchmarkMatch_*Constraint*` | Constraint evaluation overhead (none, Int, multiple, Regexp, Host) |
+| `BenchmarkMatch_Query*` | Query parameter handling (loose, strict, many params) |
+| `BenchmarkSelectBest_*` | Candidate scoring and selection at 2, 10, 50 candidates |
+| `BenchmarkURL_*` / `BenchmarkPath_*` | URL and path generation (static, params, query) |
+| `BenchmarkParam*` | Parameter extraction (String, Int, Int64, Float64, Bool, custom) |
+| `BenchmarkServeHTTP_*` | Full request dispatch (static, parameterized, 404, 405, slash redirect, canonical redirect) |
+| `BenchmarkHandle_*` / `BenchmarkResource_*` | Route registration (simple, with options, full resource) |
+| `BenchmarkBindHelpers_*` | Reflection-based URL helper setup and invocation |
+| `BenchmarkComputeCanonicalURL` / `BenchmarkIsCanonicalURL_*` | Canonical URL computation and comparison |
+| `BenchmarkNormalizeQuery_*` | Query string normalization at 2 and 20 params |
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
