@@ -559,6 +559,48 @@ Constraints are evaluated after template extraction, keeping the template clean 
 
 Register all routes during startup, then treat the router as immutable. `ServeHTTP` is safe for concurrent use. Concurrent registration during serving is not supported.
 
+## Testing
+
+### Unit tests
+
+```sh
+go test ./...
+```
+
+### Fuzz tests
+
+The package includes Go native fuzz tests targeting parsing, matching, parameter extraction, URL generation, and HTTP serving code paths. Fuzz tests help discover panics, crashes, and edge cases with arbitrary inputs.
+
+Run a specific fuzz target for 30 seconds:
+
+```sh
+go test -fuzz='^FuzzRouteMatch$' -fuzztime=30s ./...
+```
+
+Run only the seed corpus (useful in CI):
+
+```sh
+go test -run='Fuzz' ./...
+```
+
+Available fuzz targets:
+
+| Target | File | What it exercises |
+|---|---|---|
+| `FuzzRouteMatch` | `fuzz_match_test.go` | `Router.Match()` with arbitrary methods and paths |
+| `FuzzRouteMatchRawPath` | `fuzz_match_test.go` | Matching with encoded/raw URL paths |
+| `FuzzRouteMatchRecorder` | `fuzz_match_test.go` | Full `ServeHTTP` dispatch via match |
+| `FuzzParamExtraction` | `fuzz_param_test.go` | `ParamInt`, `ParamInt64`, `ParamFloat64`, `ParamBool`, `ParamString` |
+| `FuzzParamExtractionMissing` | `fuzz_param_test.go` | Param extraction with missing context |
+| `FuzzURLGeneration` | `fuzz_urlgen_test.go` | `Router.URL()` and `Router.Path()` with arbitrary param values |
+| `FuzzURLGenerationUnknownRoute` | `fuzz_urlgen_test.go` | URL generation for unknown route names |
+| `FuzzRouteRegistration` | `fuzz_template_test.go` | Route registration with arbitrary template strings |
+| `FuzzMethodSetFrom` | `fuzz_methodset_test.go` | `MethodSetFrom` and `MethodFromString` with arbitrary input |
+| `FuzzCanonicalMatch` | `fuzz_canonical_test.go` | Canonical URL matching with arbitrary query strings |
+| `FuzzCanonicalRedirect` | `fuzz_canonical_test.go` | Canonical redirect via `ServeHTTP` |
+| `FuzzServeHTTP` | `fuzz_serve_test.go` | Full dispatch with slash redirect policy |
+| `FuzzServeHTTPComplex` | `fuzz_serve_test.go` | Dispatch with slash redirect and canonical annotate policies |
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
